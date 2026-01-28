@@ -35,16 +35,19 @@ async def on_voice_state_update(member, before, after):
         return
 
     vc = channel.guild.voice_client
-    if vc is None:
+
+    if vc is None or not vc.is_connected():
         vc = await channel.connect()
         await asyncio.sleep(1)
 
+    filename = f"voz_{member.id}.mp3"
+
     tts = gTTS(text=texto, lang="pt-br", slow=False)
-    tts.save("voz.mp3")
+    tts.save(filename)
 
     if vc.is_playing():
         vc.stop()
 
-    vc.play(discord.FFmpegPCMAudio("voz.mp3"))
+    vc.play(discord.FFmpegPCMAudio(filename))
 
 bot.run(TOKEN)
