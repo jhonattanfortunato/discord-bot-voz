@@ -1,8 +1,8 @@
 import discord
 from discord.ext import commands
-from gtts import gTTS
 import asyncio
 import os
+import pyttsx3
 
 TOKEN = os.getenv("DISCORD_TOKEN")
 
@@ -14,32 +14,61 @@ intents.message_content = True
 
 bot = commands.Bot(command_prefix="!", intents=intents)
 
+# 🔊 Controle global
+bot_ativo = True
+
+# 🎙️ Configuração da voz
+engine = pyttsx3.init()
+engine.setProperty("rate", 165)  # velocidade da fala
+engine.setProperty("volume", 1.0)
+
+def falar(texto):
+    engine.save_to_file(texto, "voz.wav")
+    engine.runAndWait()
+
 @bot.event
 async def on_ready():
-    print(f"🤖 Bot conectado como {bot.user}")
+    print(f"🤖 Bot online como {bot.user}")
+
+# 🧩 COMANDOS
+@bot.command()
+@commands.has_permissions(administrator=True)
+async def ligar(ctx):
+    global bot_ativo
+    bot_ativo = True
+    await ctx.send("🔊 Bot de voz **LIGADO**")
+
+@bot.command()
+@commands.has_permissions(administrator=True)
+async def desligar(ctx):
+    global bot_ativo
+    bot_ativo = False
+    if ctx.guild.voice_client:
+        await ctx.guild.voice_client.disconnect()
+    await ctx.send("🔇 Bot de voz **DESLIGADO**")
 
 @bot.event
 async def on_voice_state_update(member, before, after):
-    if member.bot:
+    if member.bot or not bot_ativo:
         return
 
     texto = None
     canal_destino = None
 
-    # Entrou no canal
+    # Entrou
     if before.channel is None and after.channel is not None:
         canal_destino = after.channel
-        texto = f"{member.display_name} entrou"
+        texto = f"{member.display_name} entrou no canal"
 
-    # Saiu do canal
+    # Saiu
     elif before.channel is not None and after.channel is None:
         canal_destino = before.channel
-        texto = f"{member.display_name} saiu"
+        texto = f"{member.display_name} saiu do canal"
 
-    # Mudou de canal
+    # Mudou
     elif before.channel and after.channel and before.channel != after.channel:
         canal_destino = after.channel
-        texto = f"{member.display_name} mudou"
+        texto = f"{member.display_name} mudou de canal"
 
     else:
         return
@@ -54,15 +83,14 @@ async def on_voice_state_update(member, before, after):
         elif vc.channel != canal_destino:
             await vc.move_to(canal_destino)
 
-        tts = gTTS(text=texto, lang="pt-br")
-        tts.save("voz.mp3")
+        falar(texto)
 
         if vc.is_playing():
             vc.stop()
 
-        vc.play(discord.FFmpegPCMAudio("voz.mp3"))
+        vc.play(discord.FFmpegPCMAudio("voz.wav"))
 
     except Exception as e:
-        print("❌ Erro no bot de voz:", e)
+        print("❌ Erro no bot:", e)
 
 bot.run(TOKEN)
