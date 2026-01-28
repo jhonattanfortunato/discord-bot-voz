@@ -14,21 +14,21 @@ intents.message_content = True
 
 bot = commands.Bot(command_prefix="!", intents=intents)
 
-# Guarda se o bot está ligado por servidor
+# Guarda se o bot está ativo por servidor
 bot_ativo = {}
 
 @bot.event
 async def on_ready():
     print(f"🤖 Bot conectado como {bot.user}")
 
-# Comando para ligar o bot
+# 🔊 Comando para ligar o bot
 @bot.command()
 @commands.has_permissions(administrator=True)
 async def ligar(ctx):
     bot_ativo[ctx.guild.id] = True
     await ctx.send("🔊 Bot de voz **ligado**")
 
-# Comando para desligar o bot
+# 🔇 Comando para desligar o bot
 @bot.command()
 @commands.has_permissions(administrator=True)
 async def desligar(ctx):
@@ -43,32 +43,47 @@ async def on_voice_state_update(member, before, after):
     if member.bot:
         return
 
-    # Verifica se o bot está ligado
     if not bot_ativo.get(member.guild.id, False):
         return
+
+    guild = member.guild
+    afk_channel = guild.afk_channel
 
     texto = None
     canal_destino = None
 
-    # Entrou no canal
+    # 🔹 Entrou em canal (não AFK)
     if before.channel is None and after.channel is not None:
+        if after.channel == afk_channel:
+            return
         canal_destino = after.channel
         texto = f"{member.display_name} entrou"
 
-    # Saiu do canal
+    # 🔹 Saiu do canal
     elif before.channel is not None and after.channel is None:
+        if before.channel == afk_channel:
+            return
         canal_destino = before.channel
         texto = f"{member.display_name} saiu"
 
-    # Mudou de canal
+    # 🔹 Mudou de canal
     elif before.channel and after.channel and before.channel != after.channel:
-        canal_destino = after.channel
-        texto = f"{member.display_name} mudou"
 
+        # Foi movido para AFK → anuncia no canal antigo
+        if after.channel == afk_channel:
+            canal_destino = before.channel
+            texto = f"{member.display_name} foi movido para o AFK"
+
+        # Mudança normal (sem AFK)
+        elif before.channel != afk_channel:
+            canal_destino = after.channel
+            texto = f"{member.display_name} mudou"
+
+        else:
+            return
     else:
         return
 
-    # Pequena espera para evitar bug do Discord
     await asyncio.sleep(0.5)
 
     vc = canal_destino.guild.voice_client
@@ -82,8 +97,8 @@ async def on_voice_state_update(member, before, after):
         tts = gTTS(text=texto, lang="pt-br")
         tts.save("voz.mp3")
 
-        if vc.is_playing():
-            vc.stop()
+        while vc.is_playing():
+            await asyncio.sleep(0.1)
 
         vc.play(discord.FFmpegPCMAudio("voz.mp3"))
 
