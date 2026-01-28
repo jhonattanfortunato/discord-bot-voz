@@ -39,7 +39,7 @@ async def on_voice_state_update(member, before, after):
     # Mudou de canal
     elif before.channel and after.channel and before.channel != after.channel:
         canal_destino = after.channel
-        texto = f"{member.display_name} mudou de canal"
+        texto = f"{member.display_name} mudou"
 
     else:
         return
