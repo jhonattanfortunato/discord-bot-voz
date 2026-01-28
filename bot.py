@@ -9,19 +9,19 @@ async def on_voice_state_update(member, before, after):
     # Entrou em um canal
     if before.channel is None and after.channel is not None:
         channel = after.channel
-        texto = f"{member.display_name} entrou"
+        texto = f"{member.display_name} entrou no canal"
 
-    # Saiu de um canal
+    # Saiu do canal
     elif before.channel is not None and after.channel is None:
         channel = before.channel
-        texto = f"{member.display_name} saiu"
+        texto = f"{member.display_name} saiu do canal"
 
     # Mudou de canal
-    elif before.channel != after.channel:
+    elif before.channel is not None and after.channel is not None and before.channel != after.channel:
         channel = after.channel
-        texto = f"{member.display_name} mudou de canal"
+        texto = f"{member.display_name} mudou"
 
-    if texto is None or channel is None:
+    else:
         return
 
     vc = channel.guild.voice_client
@@ -29,7 +29,7 @@ async def on_voice_state_update(member, before, after):
         vc = await channel.connect()
         await asyncio.sleep(1)
 
-    tts = gTTS(text=texto, lang="pt-br")
+    tts = gTTS(text=texto, lang="pt-br", slow=False)
     tts.save("voz.mp3")
 
     if vc.is_playing():
