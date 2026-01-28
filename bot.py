@@ -4,29 +4,34 @@ async def on_voice_state_update(member, before, after):
         return
 
     texto = None
-    channel = None
+    canal_destino = None
 
     # Entrou em um canal
     if before.channel is None and after.channel is not None:
-        channel = after.channel
+        canal_destino = after.channel
         texto = f"{member.display_name} entrou no canal"
 
     # Saiu do canal
     elif before.channel is not None and after.channel is None:
-        channel = before.channel
+        canal_destino = before.channel
         texto = f"{member.display_name} saiu do canal"
 
     # Mudou de canal
     elif before.channel is not None and after.channel is not None and before.channel != after.channel:
-        channel = after.channel
-        texto = f"{member.display_name} mudou"
+        canal_destino = after.channel
+        texto = f"{member.display_name} mudou de canal"
 
     else:
         return
 
-    vc = channel.guild.voice_client
-    if vc is None or not vc.is_connected():
-        vc = await channel.connect()
+    vc = canal_destino.guild.voice_client
+
+    # Se o bot já estiver conectado em outro canal, move ele
+    if vc and vc.is_connected():
+        if vc.channel != canal_destino:
+            await vc.move_to(canal_destino)
+    else:
+        vc = await canal_destino.connect()
         await asyncio.sleep(1)
 
     tts = gTTS(text=texto, lang="pt-br", slow=False)
