@@ -21,14 +21,14 @@ bot_ativo = {}
 async def on_ready():
     print(f"🤖 Bot conectado como {bot.user}")
 
-# 🔊 Comando para ligar o bot
+# 🔊 Ligar bot
 @bot.command()
 @commands.has_permissions(administrator=True)
 async def ligar(ctx):
     bot_ativo[ctx.guild.id] = True
     await ctx.send("🔊 Bot de voz **ligado**")
 
-# 🔇 Comando para desligar o bot
+# 🔇 Desligar bot
 @bot.command()
 @commands.has_permissions(administrator=True)
 async def desligar(ctx):
@@ -52,29 +52,29 @@ async def on_voice_state_update(member, before, after):
     texto = None
     canal_destino = None
 
-    # 🔹 Entrou em canal (não AFK)
+    # Entrou no canal
     if before.channel is None and after.channel is not None:
         if after.channel == afk_channel:
             return
         canal_destino = after.channel
         texto = f"{member.display_name} entrou"
 
-    # 🔹 Saiu do canal
+    # Saiu do canal
     elif before.channel is not None and after.channel is None:
         if before.channel == afk_channel:
             return
         canal_destino = before.channel
         texto = f"{member.display_name} saiu"
 
-    # 🔹 Mudou de canal
+    # Mudou de canal
     elif before.channel and after.channel and before.channel != after.channel:
 
-        # Foi movido para AFK → anuncia no canal antigo
+        # Foi movido para AFK
         if after.channel == afk_channel:
             canal_destino = before.channel
             texto = f"{member.display_name} foi movido para o AFK"
 
-        # Mudança normal (sem AFK)
+        # Mudança normal
         elif before.channel != afk_channel:
             canal_destino = after.channel
             texto = f"{member.display_name} mudou"
@@ -86,21 +86,20 @@ async def on_voice_state_update(member, before, after):
 
     await asyncio.sleep(0.5)
 
-    vc = canal_destino.guild.voice_client
-
     try:
-        if vc is None:
-            vc = await canal_destino.connect()
-        elif vc.channel != canal_destino:
-            await vc.move_to(canal_destino)
+        vc = await canal_destino.connect()
 
         tts = gTTS(text=texto, lang="pt-br")
         tts.save("voz.mp3")
 
-        while vc.is_playing():
-            await asyncio.sleep(0.1)
-
         vc.play(discord.FFmpegPCMAudio("voz.mp3"))
+
+        # ⏳ Espera terminar de falar
+        while vc.is_playing():
+            await asyncio.sleep(0.2)
+
+        # 🔌 Desconecta após falar
+        await vc.disconnect()
 
     except Exception as e:
         print("❌ Erro no bot de voz:", e)
