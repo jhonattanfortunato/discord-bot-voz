@@ -15,6 +15,10 @@ intents.message_content = True
 bot = commands.Bot(command_prefix="!", intents=intents)
 
 @bot.event
+async def on_ready():
+    print(f"🤖 Bot conectado como {bot.user}")
+
+@bot.event
 async def on_voice_state_update(member, before, after):
     if member.bot:
         return
@@ -22,7 +26,7 @@ async def on_voice_state_update(member, before, after):
     texto = None
     canal_destino = None
 
-    # Entrou em canal
+    # Entrou no canal
     if before.channel is None and after.channel is not None:
         canal_destino = after.channel
         texto = f"{member.display_name} entrou"
@@ -40,18 +44,13 @@ async def on_voice_state_update(member, before, after):
     else:
         return
 
-    # 🔴 GARANTE que existe canal
-    if canal_destino is None:
-        return
-
-    # 🔴 ESPERA o Discord atualizar o estado
     await asyncio.sleep(0.5)
 
     vc = canal_destino.guild.voice_client
 
     try:
         if vc is None:
-            vc = await canal_destino.connect(timeout=10)
+            vc = await canal_destino.connect()
         elif vc.channel != canal_destino:
             await vc.move_to(canal_destino)
 
@@ -64,4 +63,6 @@ async def on_voice_state_update(member, before, after):
         vc.play(discord.FFmpegPCMAudio("voz.mp3"))
 
     except Exception as e:
-        print("Erro ao entrar ou falar no canal:", e)
+        print("❌ Erro no bot de voz:", e)
+
+bot.run(TOKEN)
